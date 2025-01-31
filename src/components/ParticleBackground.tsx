@@ -26,15 +26,47 @@ const ParticleBackground = () => {
     
     particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
-    const particlesMaterial = new THREE.PointsMaterial({
+    // Create lines
+    const linesMaterial = new THREE.LineBasicMaterial({
+      color: '#F97316',
+      transparent: true,
+      opacity: 0.2,
+    });
+
+    const pointsMaterial = new THREE.PointsMaterial({
       size: 0.005,
       color: '#F97316',
       transparent: true,
       opacity: 0.8,
     });
 
-    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    const particlesMesh = new THREE.Points(particlesGeometry, pointsMaterial);
+    
+    // Create lines between particles
+    const linesGeometry = new THREE.BufferGeometry();
+    const linePositions = [];
+    const positions = particlesGeometry.attributes.position.array;
+    
+    for(let i = 0; i < positions.length; i += 3) {
+      for(let j = i + 3; j < positions.length; j += 3) {
+        const distance = Math.sqrt(
+          Math.pow(positions[i] - positions[j], 2) +
+          Math.pow(positions[i + 1] - positions[j + 1], 2) +
+          Math.pow(positions[i + 2] - positions[j + 2], 2)
+        );
+        
+        if(distance < 0.5) {
+          linePositions.push(positions[i], positions[i + 1], positions[i + 2]);
+          linePositions.push(positions[j], positions[j + 1], positions[j + 2]);
+        }
+      }
+    }
+    
+    linesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+    const linesMesh = new THREE.LineSegments(linesGeometry, linesMaterial);
+    
     scene.add(particlesMesh);
+    scene.add(linesMesh);
     camera.position.z = 2;
 
     const handleMouseMove = (event: MouseEvent) => {
@@ -57,10 +89,14 @@ const ParticleBackground = () => {
       requestAnimationFrame(animate);
       particlesMesh.rotation.x += 0.0001;
       particlesMesh.rotation.y += 0.0001;
+      linesMesh.rotation.x += 0.0001;
+      linesMesh.rotation.y += 0.0001;
 
       // Follow mouse with slight delay
       particlesMesh.rotation.x += (mousePosition.current.y * 0.5 - particlesMesh.rotation.x) * 0.05;
       particlesMesh.rotation.y += (mousePosition.current.x * 0.5 - particlesMesh.rotation.y) * 0.05;
+      linesMesh.rotation.x += (mousePosition.current.y * 0.5 - linesMesh.rotation.x) * 0.05;
+      linesMesh.rotation.y += (mousePosition.current.x * 0.5 - linesMesh.rotation.y) * 0.05;
 
       renderer.render(scene, camera);
     };
@@ -74,7 +110,13 @@ const ParticleBackground = () => {
     };
   }, []);
 
-  return <div ref={containerRef} className="particles-container" />;
+  return (
+    <div 
+      ref={containerRef} 
+      className="fixed top-0 left-0 w-full h-full -z-10" 
+      style={{ pointerEvents: 'none' }}
+    />
+  );
 };
 
 export default ParticleBackground;
